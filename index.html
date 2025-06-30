@@ -1,124 +1,92 @@
-<!-- Bir wrapper div ile tüm stil ve sahne alanını izole ediyoruz -->
-<div id="apartman-editor" style="position:relative; width:100%; height:600px; overflow:hidden;">
-  
-  <!-- 3B Canvas -->
-  <canvas id="scene" style="width:100%; height:100%; display:block;"></canvas>
-  
-  <!-- Basit Kontrol Paneli -->
-  <div id="ui" style="
-      position:absolute; top:10px; left:10px;
-      background:rgba(255,255,255,0.85); padding:8px; border-radius:4px;
-      font-family:Arial, sans-serif; font-size:14px; z-index:2;
-  ">
-    <label style="display:block; margin-bottom:4px;">
-      Kat Sayısı:
-      <input type="number" id="floors" value="3" min="1" style="width:50px;">
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+  <meta charset="UTF-8">
+  <title>3D Apartman Editörü</title>
+  <style>
+    body { margin: 0; overflow: hidden; font-family: Arial; }
+    #ui {
+      position: absolute; top: 10px; left: 10px; z-index: 1;
+      background: rgba(255,255,255,0.85); padding: 10px; border-radius: 4px;
+    }
+    #ui label { display: block; margin-bottom: 5px; }
+    #ui input, #ui button { margin-right: 5px; }
+    canvas { display: block; }
+  </style>
+</head>
+<body>
+  <canvas id="scene"></canvas>
+  <div id="ui">
+    <label>Kat Sayısı:
+      <input type="number" id="floors" value="3" min="1" style="width:50px">
     </label>
-    <label style="display:block; margin-bottom:4px;">
-      Daire/Kat:
-      <input type="number" id="units" value="2" min="1" style="width:50px;">
+    <label>Daire/Kat:
+      <input type="number" id="units" value="2" min="1" style="width:50px">
     </label>
-    <button id="btnGenerate" style="padding:4px 8px; margin-top:4px;">
-      Modeli Oluştur
-    </button>
+    <button id="btnGenerate">Modeli Oluştur</button>
   </div>
-  
-  <!-- Three.js ve OrbitControls -->
+
   <script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/three@0.152.2/examples/js/controls/OrbitControls.js"></script>
-  
-  <!-- Uygulama Kodu -->
   <script>
-    (function(){
-      let scene,camera,renderer,controls,buildingGroup;
-      // Başlangıç
-      initScene();
-      document.getElementById('btnGenerate').addEventListener('click', generateBuilding);
-      
-      function initScene(){
-        // Sahne ve kamera
-        scene = new THREE.Scene();
-        scene.background = new THREE.Color(0xe0e0e0);
-        camera = new THREE.PerspectiveCamera(60, 1, 0.1, 1000);
-        camera.position.set(5,5,10);
-        
-        // Renderer
-        const canvas = document.getElementById('scene');
-        renderer = new THREE.WebGLRenderer({canvas, antialias:true});
-        resizeRenderer();
-        
-        // OrbitControls
-        controls = new THREE.OrbitControls(camera, renderer.domElement);
-        controls.update();
-        
-        // Işıklar
-        scene.add(new THREE.HemisphereLight(0xffffff,0x444444,1.0));
-        const dir = new THREE.DirectionalLight(0xffffff,0.8);
-        dir.position.set(5,10,7);
-        scene.add(dir);
-        
-        // Izgara zemin
-        scene.add(new THREE.GridHelper(20,20));
-        
-        // Bina grubu
-        buildingGroup = new THREE.Group();
-        scene.add(buildingGroup);
-        
-        // Yeniden boyut
-        window.addEventListener('resize', ()=>{
-          resizeRenderer();
-          controls.update();
-        });
-        
-        animate();
-      }
-      
-      function resizeRenderer(){
-        const canvas = renderer.domElement;
-        const parent = canvas.parentElement;
-        const w = parent.clientWidth;
-        const h = parent.clientHeight;
-        renderer.setSize(w,h);
-        camera.aspect = w/h;
-        camera.updateProjectionMatrix();
-      }
-      
-      function generateBuilding(){
-        // Önceki nesneleri kaldır
-        buildingGroup.clear();
-        
-        const floors = parseInt(document.getElementById('floors').value,10);
-        const units  = parseInt(document.getElementById('units').value,10);
-        const unitW = 1, unitD = 1, floorH = 0.5;
-        const mat = new THREE.MeshLambertMaterial({color:0x8d5524});
-        
-        // Kat ve daire blokları
-        for(let f=0; f<floors; f++){
-          for(let u=0; u<units; u++){
-            const geo = new THREE.BoxGeometry(unitW, floorH, unitD);
-            const mesh = new THREE.Mesh(geo, mat);
-            mesh.position.set(
-              (u - (units-1)/2) * (unitW + 0.1),
-              f*floorH + floorH/2,
-              0
-            );
-            buildingGroup.add(mesh);
-          }
+  (function(){
+    let scene,camera,renderer,controls,buildingGroup;
+    initScene();
+    document.getElementById('btnGenerate').addEventListener('click', generateBuilding);
+
+    function initScene(){
+      scene = new THREE.Scene();
+      scene.background = new THREE.Color(0xe0e0e0);
+      camera = new THREE.PerspectiveCamera(60, window.innerWidth/window.innerHeight, 0.1, 1000);
+      camera.position.set(5,5,10);
+      renderer = new THREE.WebGLRenderer({canvas: document.getElementById('scene'), antialias:true});
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      controls = new THREE.OrbitControls(camera, renderer.domElement);
+      controls.update();
+      scene.add(new THREE.HemisphereLight(0xffffff,0x444444,1.0));
+      const dir = new THREE.DirectionalLight(0xffffff,0.8);
+      dir.position.set(5,10,7);
+      scene.add(dir);
+      scene.add(new THREE.GridHelper(20,20));
+      buildingGroup = new THREE.Group();
+      scene.add(buildingGroup);
+      window.addEventListener('resize', onResize);
+      animate();
+    }
+
+    function onResize(){
+      renderer.setSize(window.innerWidth, window.innerHeight);
+      camera.aspect = window.innerWidth/window.innerHeight;
+      camera.updateProjectionMatrix();
+    }
+
+    function generateBuilding(){
+      buildingGroup.clear();
+      const floors = parseInt(document.getElementById('floors').value,10);
+      const units  = parseInt(document.getElementById('units').value,10);
+      const unitW=1, unitD=1, floorH=0.5;
+      const mat = new THREE.MeshLambertMaterial({color:0x8d5524});
+      for(let f=0; f<floors; f++){
+        for(let u=0; u<units; u++){
+          const geo = new THREE.BoxGeometry(unitW, floorH, unitD);
+          const mesh = new THREE.Mesh(geo, mat);
+          mesh.position.set((u-(units-1)/2)*(unitW+0.1), f*floorH+floorH/2, 0);
+          buildingGroup.add(mesh);
         }
-        
-        // Düz çatıyı ekle
-        const roofGeo = new THREE.BoxGeometry(units*(unitW+0.1), 0.2, unitD+0.2);
-        const roofMat = new THREE.MeshLambertMaterial({color:0xdddddd});
-        const roof = new THREE.Mesh(roofGeo, roofMat);
-        roof.position.set(0, floors*floorH + 0.1, 0);
-        buildingGroup.add(roof);
       }
-      
-      function animate(){
-        requestAnimationFrame(animate);
-        controls.update();
-        renderer.render(scene, camera);
-      }
-    })();
+      const roofGeo = new THREE.BoxGeometry(units*(unitW+0.1),0.2,unitD+0.2);
+      const roofMat = new THREE.MeshLambertMaterial({color:0xdddddd});
+      const roof = new THREE.Mesh(roofGeo, roofMat);
+      roof.position.set(0, floors*floorH+0.1, 0);
+      buildingGroup.add(roof);
+    }
+
+    function animate(){
+      requestAnimationFrame(animate);
+      controls.update();
+      renderer.render(scene, camera);
+    }
+  })();
   </script>
-</div>
+</body>
+</html>
